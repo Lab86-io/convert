@@ -1,4 +1,4 @@
-import { Files, Plus } from "lucide-react";
+import { ArrowDownToLine, Plus } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { universalAcceptAttribute } from "../lib/formats";
 
@@ -27,11 +27,15 @@ export function Dropzone({ onFiles, variant }: DropzoneProps) {
 	return (
 		<label
 			htmlFor={inputId}
-			className={`group relative block cursor-pointer overflow-hidden rounded-2xl border transition-all duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-paper ${
+			className={`group relative cursor-pointer transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2 ${
 				dragActive
-					? "border-accent bg-accent-wash shadow-[0_0_0_4px_var(--color-accent-wash)]"
-					: "border-dashed border-line bg-white/55 hover:border-ink-faint"
-			} ${variant === "hero" ? "px-6 py-12 sm:py-16" : "px-5 py-4"}`}
+					? "border-accent bg-accent-wash"
+					: "border-line hover:border-ink"
+			} ${
+				variant === "hero"
+					? "drop-grid flex min-h-60 items-center border border-dashed px-6 py-10 sm:min-h-72 sm:px-10"
+					: "inline-flex items-center border-0"
+			}`}
 			onDragEnter={(event) => {
 				event.preventDefault();
 				dragDepth.current += 1;
@@ -56,31 +60,38 @@ export function Dropzone({ onFiles, variant }: DropzoneProps) {
 				aria-describedby={`${inputId}-hint`}
 			/>
 			{variant === "hero" ? (
-				<span className="flex flex-col items-center text-center">
-					<span className="mb-5 flex size-12 items-center justify-center rounded-xl border border-line bg-paper text-ink-soft shadow-sm transition-transform group-hover:-translate-y-0.5">
-						<Files className="size-5" strokeWidth={1.75} aria-hidden="true" />
+				<span className="mx-auto grid w-full max-w-3xl items-center gap-6 sm:grid-cols-[4rem_minmax(0,1fr)_auto] sm:gap-8">
+					<span className="flex size-14 items-center justify-center border border-ink bg-panel text-ink transition-transform group-hover:-translate-y-0.5 sm:size-16">
+						<ArrowDownToLine
+							className="size-6"
+							strokeWidth={1.5}
+							aria-hidden="true"
+						/>
 					</span>
-					<span className="font-display text-2xl tracking-tight sm:text-3xl">
-						{dragActive ? "Let go to add them" : "Drop anything here"}
+					<span>
+						<span className="block text-xl font-semibold tracking-[-0.025em] sm:text-2xl">
+							{dragActive
+								? "Release to add files"
+								: "Drop files into this batch"}
+						</span>
+						<span className="mt-2 block text-sm leading-5 text-ink-soft">
+							Images, audio, video, documents, text, or structured data. Files
+							never leave this browser.
+						</span>
+						<span id={`${inputId}-hint`} className="sr-only">
+							Select multiple files at once
+						</span>
 					</span>
-					<span className="mt-2 text-sm text-ink-soft">
-						Images, video, audio, documents, and structured data
-					</span>
-					<span className="mt-5 inline-flex rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper transition-colors group-hover:bg-accent-deep">
-						Choose files
-					</span>
-					<span id={`${inputId}-hint`} className="mt-3 text-xs text-ink-faint">
-						Choose several formats at once · nothing is uploaded
+					<span className="inline-flex h-10 w-fit items-center justify-center bg-ink px-4 text-xs font-semibold text-white transition-colors group-hover:bg-accent">
+						Select files
 					</span>
 				</span>
 			) : (
-				<span className="flex items-center justify-center gap-2.5 text-sm">
-					<Plus className="size-4 text-ink-soft" aria-hidden="true" />
-					<span className="font-medium">
-						{dragActive ? "Drop to add" : "Add more files"}
-					</span>
-					<span id={`${inputId}-hint`} className="text-ink-faint">
-						mixed formats welcome
+				<span className="flex items-center gap-1.5 text-xs font-semibold text-accent">
+					<Plus className="size-3.5" aria-hidden="true" />
+					<span>{dragActive ? "Drop to add" : "Add more files"}</span>
+					<span id={`${inputId}-hint`} className="sr-only">
+						Mixed formats welcome
 					</span>
 				</span>
 			)}

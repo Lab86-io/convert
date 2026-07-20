@@ -7,7 +7,7 @@ afterEach(cleanup);
 describe("Dropzone", () => {
 	it("accepts files from every supported family", () => {
 		render(<Dropzone onFiles={() => {}} variant="hero" />);
-		const input = screen.getByLabelText(/drop anything here/i, {
+		const input = screen.getByLabelText(/drop files into this batch/i, {
 			exact: false,
 		}) as HTMLInputElement;
 		expect(input.accept).toContain("image/heic");

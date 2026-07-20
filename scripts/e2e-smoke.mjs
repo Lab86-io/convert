@@ -37,8 +37,9 @@ page.on("console", (message) => {
 });
 
 async function reset() {
-	await page.goto(url, { waitUntil: "networkidle" });
-	await page.getByRole("heading", { name: /anything.*anything/i }).waitFor();
+	await page.goto(url, { waitUntil: "domcontentloaded" });
+	await page.getByRole("heading", { name: /^convert files$/i }).waitFor();
+	await page.waitForTimeout(1_000);
 }
 
 async function convertOne(file, target) {

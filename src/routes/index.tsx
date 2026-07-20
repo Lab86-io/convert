@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-	Archive,
-	ArrowRight,
-	CheckCircle2,
-	LockKeyhole,
-	X,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+import { Archive, ArrowRight, Check, LockKeyhole, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Dropzone } from "../components/Dropzone";
 import { FileCard } from "../components/FileCard";
 import { Spinner } from "../components/Spinner";
@@ -23,20 +17,8 @@ import { useConversionQueue } from "../lib/use-conversion-queue";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-const featuredFormats = [
-	"HEIC",
-	"JPG",
-	"PNG",
-	"WEBP",
-	"MP4",
-	"MOV",
-	"MP3",
-	"WAV",
-	"PDF",
-	"DOCX",
-	"JSON",
-	"CSV",
-];
+const inputFormatCount = formats.filter((format) => format.canInput).length;
+const outputFormatCount = formats.filter((format) => format.canOutput).length;
 
 function Home() {
 	const {
@@ -79,6 +61,33 @@ function Home() {
 		return { input, output, percent: sizeChangePercent(input, output) };
 	}, [doneItems]);
 
+	useEffect(() => {
+		if (!hasItems) return;
+		function keepFileDropInApp(event: DragEvent) {
+			if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
+		}
+		function addDroppedFiles(event: DragEvent) {
+			if (event.defaultPrevented || !event.dataTransfer?.files.length) return;
+			event.preventDefault();
+			addFiles(event.dataTransfer.files);
+		}
+		document.addEventListener("dragover", keepFileDropInApp);
+		document.addEventListener("drop", addDroppedFiles);
+		return () => {
+			document.removeEventListener("dragover", keepFileDropInApp);
+			document.removeEventListener("drop", addDroppedFiles);
+		};
+	}, [addFiles, hasItems]);
+
+	function handleClear() {
+		if (
+			doneItems.length > 0 &&
+			!window.confirm("Clear this batch and remove its converted downloads?")
+		)
+			return;
+		clearAll();
+	}
+
 	async function handleDownloadAll() {
 		if (!doneItems.length || zipping) return;
 		setZipping(true);
@@ -103,208 +112,240 @@ function Home() {
 
 	return (
 		<div className="flex min-h-dvh flex-col">
-			<header className="border-b border-line/80">
-				<div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+			<header className="border-b border-line bg-panel">
+				<div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
 					<Wordmark />
-					<p className="flex items-center gap-1.5 text-xs text-ink-soft">
-						<LockKeyhole className="size-3.5 text-ok" aria-hidden="true" />
-						<span>Local-only conversion</span>
+					<p className="font-mono text-[11px] uppercase tracking-[0.06em] text-ink-soft">
+						{inputFormatCount} inputs · {outputFormatCount} outputs
 					</p>
 				</div>
 			</header>
 
-			<main className="mx-auto w-full max-w-5xl flex-1 px-4 py-9 sm:px-6 sm:py-14">
+			<main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
 				{!hasItems && (
-					<div className="mx-auto max-w-3xl text-center">
-						<p className="mb-4 text-[11px] font-medium uppercase tracking-[0.2em] text-ink-faint">
-							Private · in-browser · nothing uploaded
-						</p>
-						<h1 className="font-display text-4xl tracking-[-0.035em] text-balance sm:text-6xl">
-							Anything <span className="text-accent">→</span> anything
-						</h1>
-						<p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-ink-soft sm:text-lg">
-							Drop a messy mix of files, choose what each should become, and
-							convert them together. Your files stay in this browser.
-						</p>
-						<div className="mt-5 flex flex-wrap justify-center gap-1.5">
-							{featuredFormats.map((format) => (
-								<span
-									key={format}
-									className="rounded-md bg-paper-deep px-2 py-1 font-mono text-[10px] text-ink-soft"
-								>
-									{format}
-								</span>
-							))}
+					<section className="mb-5 flex flex-wrap items-end justify-between gap-4">
+						<div>
+							<h1 className="text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
+								Convert files
+							</h1>
+							<p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
+								Images, audio, video, documents, text, and data in one batch.
+							</p>
 						</div>
+						<div className="text-xs text-ink-soft">
+							<p className="flex items-center gap-2">
+								<LockKeyhole className="size-3.5" aria-hidden="true" />
+								Files stay on this device
+							</p>
+						</div>
+					</section>
+				)}
+
+				{rejectedNames.length > 0 && (
+					<div
+						role="alert"
+						className="mb-4 flex items-start justify-between gap-3 border border-danger/30 bg-danger-wash px-4 py-3 text-sm"
+					>
+						<p>
+							<span className="font-medium">Not supported yet: </span>
+							<span className="text-ink-soft">{rejectedNames.join(", ")}</span>
+						</p>
+						<button
+							type="button"
+							onClick={dismissRejected}
+							className="p-1 text-ink-soft hover:text-ink"
+						>
+							<X className="size-4" />
+							<span className="sr-only">Dismiss</span>
+						</button>
 					</div>
 				)}
 
-				<div className={`mx-auto max-w-3xl ${hasItems ? "" : "mt-8 sm:mt-10"}`}>
-					<Dropzone
-						onFiles={addFiles}
-						variant={hasItems ? "compact" : "hero"}
-					/>
-
-					{rejectedNames.length > 0 && (
-						<div
-							role="alert"
-							className="mt-4 flex items-start justify-between gap-3 rounded-xl border border-accent/30 bg-accent-wash px-4 py-3 text-sm"
-						>
-							<p>
-								<span className="font-medium">Not supported yet: </span>
-								<span className="text-ink-soft">
-									{rejectedNames.join(", ")}
-								</span>
-							</p>
+				{!hasItems ? (
+					<section
+						aria-label="New conversion"
+						className="border border-ink bg-panel"
+					>
+						<div className="flex items-center justify-between border-b border-line px-4 py-2.5 text-xs">
+							<span className="font-semibold text-ink">New batch</span>
+							<span className="text-ink-soft">
+								Choose one file or a mixed batch
+							</span>
+						</div>
+						<div className="p-3 sm:p-5">
+							<Dropzone onFiles={addFiles} variant="hero" />
+						</div>
+						<div className="grid grid-cols-2 border-t border-line sm:grid-cols-3 lg:grid-cols-6">
+							{Object.entries(categoryLabels).map(
+								([category, label], index) => {
+									const list = formats
+										.filter(
+											(format) =>
+												format.category === category && format.canInput,
+										)
+										.map((format) => format.id.toUpperCase())
+										.join("  ");
+									return (
+										<div
+											key={category}
+											className={`min-w-0 p-3 sm:p-4 ${index > 0 ? "border-l border-line" : ""} max-sm:[&:nth-child(odd)]:border-l-0 max-sm:[&:nth-child(n+3)]:border-t max-lg:[&:nth-child(4)]:border-l-0 max-lg:[&:nth-child(n+4)]:border-t`}
+										>
+											<h2 className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-ink">
+												{label}
+											</h2>
+											<p
+												className="mt-1.5 font-mono text-[10px] leading-4 text-ink-soft"
+												title={list}
+											>
+												{list}
+											</p>
+										</div>
+									);
+								},
+							)}
+						</div>
+					</section>
+				) : (
+					<section
+						aria-label="Conversion workspace"
+						className="border border-ink bg-panel"
+					>
+						<div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-3 py-2.5 sm:px-4">
+							<div className="flex items-center gap-3">
+								<p className="text-xs font-semibold">
+									{items.length} {items.length === 1 ? "file" : "files"}
+								</p>
+								<span className="hidden h-4 w-px bg-line sm:block" />
+								<Dropzone onFiles={addFiles} variant="compact" />
+							</div>
 							<button
 								type="button"
-								onClick={dismissRejected}
-								className="rounded p-1 text-ink-soft hover:text-ink"
+								onClick={handleClear}
+								className="text-xs text-ink-soft hover:text-ink"
 							>
-								<X className="size-4" />
-								<span className="sr-only">Dismiss</span>
+								Clear batch
 							</button>
 						</div>
-					)}
 
-					{hasItems && (
-						<section aria-label="Conversion workspace" className="mt-5">
-							<div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-paper/95 px-4 py-3 backdrop-blur-sm">
-								<div className="flex items-center gap-3">
-									<p className="text-sm font-medium">
-										{items.length} {items.length === 1 ? "file" : "files"}
+						<div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-canvas px-3 py-3 sm:px-4">
+							<div className="flex flex-wrap items-center gap-4">
+								{showQuality ? (
+									<label className="flex items-center gap-2 text-xs text-ink-soft">
+										Quality
+										<input
+											type="range"
+											min="50"
+											max="100"
+											step="5"
+											value={quality}
+											onChange={(event) =>
+												setQuality(Number(event.target.value))
+											}
+											className="w-20 sm:w-28"
+										/>
+										<output className="w-7 text-right tabular-nums text-ink">
+											{quality}
+										</output>
+									</label>
+								) : (
+									<p className="text-xs text-ink-soft">
+										Choose an output format in each row
 									</p>
-									{showQuality && (
-										<label className="flex items-center gap-2 text-xs text-ink-soft">
-											Quality{" "}
-											<input
-												type="range"
-												min="50"
-												max="100"
-												step="5"
-												value={quality}
-												onChange={(event) =>
-													setQuality(Number(event.target.value))
-												}
-												className="w-20 sm:w-28"
-											/>
-											<output className="w-6 font-mono tabular-nums">
-												{quality}
-											</output>
-										</label>
-									)}
-									{staleCount > 0 && !working && (
-										<button
-											type="button"
-											onClick={reconvertAll}
-											className="text-xs font-medium text-accent-deep underline underline-offset-4"
-										>
-											Re-convert finished
-										</button>
-									)}
-								</div>
-								<div className="flex items-center gap-2">
-									{working && (
-										<p className="flex items-center gap-1.5 text-xs text-ink-soft">
-											<Spinner className="size-3.5" />
-											{doneItems.length} of {items.length} done
-										</p>
-									)}
-									{actionableCount > 0 && !working && (
-										<button
-											type="button"
-											onClick={startAll}
-											className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-sm font-medium text-white transition-colors hover:bg-accent-deep"
-										>
-											Convert{" "}
-											{actionableCount === items.length
-												? "all"
-												: actionableCount}{" "}
-											<ArrowRight className="size-3.5" aria-hidden="true" />
-										</button>
-									)}
-									{doneItems.length > 1 && !working && (
-										<button
-											type="button"
-											onClick={handleDownloadAll}
-											disabled={zipping}
-											className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-ink px-3 text-xs font-medium text-paper hover:bg-accent-deep disabled:opacity-60"
-										>
-											{zipping ? (
-												<Spinner className="size-3.5" />
-											) : (
-												<Archive className="size-3.5" />
-											)}{" "}
-											ZIP
-										</button>
-									)}
+								)}
+								{staleCount > 0 && !working && (
 									<button
 										type="button"
-										onClick={clearAll}
-										className="rounded px-1 py-2 text-xs text-ink-soft hover:text-ink"
+										onClick={reconvertAll}
+										className="text-xs font-medium text-accent underline underline-offset-4"
 									>
-										Clear
+										Re-convert finished
 									</button>
-								</div>
+								)}
 							</div>
+							<div className="flex items-center gap-2">
+								{working && (
+									<p className="flex items-center gap-2 font-mono text-[10px] uppercase text-ink-soft">
+										<Spinner className="size-3.5" /> {doneItems.length}/
+										{items.length} complete
+									</p>
+								)}
+								{doneItems.length > 1 && !working && (
+									<button
+										type="button"
+										onClick={handleDownloadAll}
+										disabled={zipping}
+										className="inline-flex h-9 items-center gap-2 border border-ink bg-panel px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] hover:bg-canvas disabled:opacity-60"
+									>
+										{zipping ? (
+											<Spinner className="size-3.5" />
+										) : (
+											<Archive className="size-3.5" />
+										)}{" "}
+										Download ZIP
+									</button>
+								)}
+								{actionableCount > 0 && !working && (
+									<button
+										type="button"
+										onClick={startAll}
+										className="inline-flex h-9 items-center gap-2 bg-accent px-4 text-xs font-semibold text-white hover:bg-accent-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+									>
+										Convert{" "}
+										{actionableCount === items.length ? "all" : actionableCount}
+										<ArrowRight className="size-3.5" aria-hidden="true" />
+									</button>
+								)}
+							</div>
+						</div>
 
-							<ul className="mt-3 space-y-2.5">
-								{items.map((item) => (
-									<FileCard
-										key={item.id}
-										item={item}
-										onRemove={removeItem}
-										onRetry={retryItem}
-										onTargetChange={changeTarget}
-									/>
-								))}
-							</ul>
+						<div className="hidden grid-cols-[2.25rem_minmax(12rem,1fr)_5.5rem_8rem_8.5rem_6.5rem] items-center gap-3 border-b border-line px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-ink-soft md:grid sm:px-4">
+							<span />
+							<span>File</span>
+							<span>From</span>
+							<span>Convert to</span>
+							<span>Status / size</span>
+							<span className="text-right">Action</span>
+						</div>
+						<ul className="divide-y divide-line">
+							{items.map((item) => (
+								<FileCard
+									key={item.id}
+									item={item}
+									onRemove={removeItem}
+									onRetry={retryItem}
+									onTargetChange={changeTarget}
+								/>
+							))}
+						</ul>
 
-							{doneItems.length > 0 && !working && (
-								<p className="mt-3 flex items-center gap-1.5 text-xs text-ink-faint">
-									<CheckCircle2 className="size-3.5 text-ok" />
-									{doneItems.length} ready · {formatBytes(savings.input)} in →{" "}
+						<div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-t border-line bg-canvas px-3 py-2 font-mono text-[11px] text-ink-soft sm:px-4">
+							{doneItems.length > 0 && !working ? (
+								<p className="flex items-center gap-2">
+									<Check className="size-3.5 text-ok" aria-hidden="true" />
+									{doneItems.length} ready / {formatBytes(savings.input)} in /{" "}
 									{formatBytes(savings.output)} out
 									{savings.percent && savings.percent < 0
-										? ` · ${-savings.percent}% smaller`
+										? ` / ${-savings.percent}% smaller`
 										: ""}
-									{errorCount ? ` · ${errorCount} failed` : ""}
+									{errorCount ? ` / ${errorCount} failed` : ""}
+								</p>
+							) : (
+								<p>
+									{working
+										? "Conversion running locally"
+										: "Review outputs, then convert"}
 								</p>
 							)}
-						</section>
-					)}
-				</div>
-
-				{!hasItems && (
-					<section className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-x-8 gap-y-7 border-t border-line pt-8 sm:grid-cols-3">
-						{Object.entries(categoryLabels).map(([category, label]) => {
-							const list = formats
-								.filter(
-									(format) => format.category === category && format.canInput,
-								)
-								.map((format) => format.id.toUpperCase())
-								.join(" · ");
-							return (
-								<div key={category}>
-									<h2 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
-										{label}
-									</h2>
-									<p className="mt-1.5 text-[11px] leading-relaxed text-ink-faint">
-										{list}
-									</p>
-								</div>
-							);
-						})}
+							<p className="text-ink-faint">Processed in this browser</p>
+						</div>
 					</section>
 				)}
 			</main>
 
-			<footer className="border-t border-line/80">
-				<div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-ink-soft sm:px-6">
-					<p>No uploads. No accounts. No files retained.</p>
-					<p className="font-mono">
-						<span className="font-semibold text-ink">lab86</span> convert
-					</p>
+			<footer className="border-t border-line bg-panel">
+				<div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-ink-faint sm:px-6">
+					<p>Local processing. No file uploads.</p>
+					<p className="font-mono">lab86 convert v1</p>
 				</div>
 			</footer>
 		</div>

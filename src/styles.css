@@ -1,22 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-	/* lab86 convert — calm editorial workbench */
-	--color-paper: #faf6ef;
-	--color-paper-deep: #f2ecdf;
-	--color-ink: #201d19;
-	--color-ink-soft: #6f675b;
-	--color-ink-faint: #a49a8a;
-	--color-line: #e4dccb;
-	--color-accent: #d64513;
-	--color-accent-deep: #a83409;
-	--color-accent-wash: #fae8df;
-	--color-ok: #3d6b35;
+	/* lab86 convert — utilitarian file workbench */
+	--color-canvas: #f2f3f5;
+	--color-panel: #ffffff;
+	--color-paper: #f2f3f5;
+	--color-paper-deep: #e8eaed;
+	--color-ink: #121417;
+	--color-ink-soft: #5e636b;
+	--color-ink-faint: #9298a1;
+	--color-line: #d6d9de;
+	--color-accent: #2855d9;
+	--color-accent-deep: #173aa6;
+	--color-accent-wash: #edf2ff;
+	--color-ok: #13804e;
+	--color-danger: #b42318;
+	--color-danger-wash: #fff1f0;
 
 	--font-sans:
 		ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
 		"Helvetica Neue", Arial, sans-serif;
-	--font-display: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+	--font-display: var(--font-sans);
 	--font-mono:
 		ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
 		monospace;
@@ -34,7 +38,7 @@ body,
 
 body {
 	margin: 0;
-	background-color: var(--color-paper);
+	background-color: var(--color-canvas);
 	color: var(--color-ink);
 	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
@@ -43,6 +47,14 @@ body {
 ::selection {
 	background-color: var(--color-accent);
 	color: #fff;
+}
+
+.drop-grid {
+	background-color: var(--color-panel);
+	background-image:
+		linear-gradient(to right, rgb(18 20 23 / 0.035) 1px, transparent 1px),
+		linear-gradient(to bottom, rgb(18 20 23 / 0.035) 1px, transparent 1px);
+	background-size: 24px 24px;
 }
 
 /* Native controls pick up the accent (range slider, checkboxes). */
