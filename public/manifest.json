@@ -1,7 +1,7 @@
 {
-	"name": "lab86 convert — HEIC to JPEG",
+	"name": "lab86 convert — anything to anything",
 	"short_name": "lab86 convert",
-	"description": "Convert HEIC and HEIF photos to JPEG directly in your browser. Files never leave your device.",
+	"description": "Convert images, media, documents, text, and structured data directly in your browser. Files never leave your device.",
 	"icons": [
 		{
 			"src": "icon.svg",

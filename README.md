@@ -1,56 +1,61 @@
-# lab86 convert — HEIC → JPEG
+# lab86 convert
 
-A browser-only converter for Apple HEIC/HEIF photos, built for
-[heic.lab86.io](https://heic.lab86.io). Drop files, pick a JPEG quality,
-convert, preview, and download — individually or as a `.zip`.
+A private, browser-only universal file converter for
+[convert.lab86.io](https://convert.lab86.io). Drop a mixed batch, choose an
+output per file, convert sequentially, then download files individually or as
+a ZIP. The original [heic.lab86.io](https://heic.lab86.io) URL remains an alias.
 
-**Privacy:** conversion runs entirely on the device with WebAssembly
-([heic-to](https://github.com/hoppergee/heic-to) / libheif). No file is ever
-uploaded; there is no server-side processing.
+Files never leave the browser. There is no upload endpoint, account, database,
+or server-side file processing.
 
-This is the first converter in the lab86 convert family. The format registry
-in `src/lib/formats.ts` and the conversion dispatcher in `src/lib/convert.ts`
-are structured so more source → target pairs can be registered later.
+## Supported conversions
+
+- Images: HEIC/HEIF, JPEG, PNG, WebP, AVIF, GIF, BMP → JPEG, PNG, WebP, PDF
+- Audio: MP3, WAV, FLAC, AAC, M4A, OGG, Opus → MP3, WAV, FLAC, M4A, OGG, Opus
+- Video: MP4, MOV, WebM, MKV, AVI, MPEG → MP4, WebM, GIF, or extracted audio
+- Data: JSON, YAML, CSV, XML → JSON, YAML, CSV, XML
+- Text: TXT, Markdown, HTML → TXT, Markdown, HTML
+- Documents: DOCX → HTML, Markdown, TXT; PDF → TXT
+
+Only valid edges are exposed in the UI. Animated image inputs use their first
+frame, scanned PDFs need OCR, and complex Word layout may be simplified. Media
+conversion is capped at 500 MB because it runs in browser memory.
 
 ## Stack
 
-- TanStack Start (React 19, file-based routing, SSR-safe — codec code is
-  dynamically imported on the client only)
-- Tailwind CSS v4 (design tokens in `src/styles.css`)
-- `heic-to` for decoding, `client-zip` for batch downloads
-- Biome for lint/format, Vitest + Testing Library for tests
+- TanStack Start, React 19, TypeScript, Vite, Tailwind CSS v4
+- `heic-to` and Canvas for images
+- `ffmpeg.wasm` for audio/video
+- Papa Parse, YAML, and fast-xml-parser for structured data
+- Marked and Turndown for markup
+- Mammoth, PDF.js, and pdf-lib for documents
+- Client Zip for local batch downloads
+- Biome, Vitest, Testing Library, and a Playwright smoke test
 
-## Layout
+## Architecture
 
-- `src/lib/formats.ts` — format registry and pure helpers (validation with
-  MIME **and** extension fallback, output naming, size formatting)
-- `src/lib/convert.ts` — client-only conversion + zip, dynamic imports
-- `src/lib/use-conversion-queue.ts` — queue state: add/convert/retry/remove,
-  sequential processing, object-URL lifecycle
-- `src/components/` — `Dropzone`, `FileCard`, `Wordmark`, `Spinner`
-- `src/routes/index.tsx` — the single-page workbench
+- `src/lib/formats.ts` — typed format registry and explicit conversion graph
+- `src/lib/engines/` — lazy-loaded image, media, data, text, and document engines
+- `src/lib/convert.ts` — engine dispatcher and ZIP creation
+- `src/lib/use-conversion-queue.ts` — mixed queue, per-file targets, progress,
+  retries, sequential processing, and object URL lifecycle
+- `src/components/` — dropzone, file row, wordmark, and spinner
+- `src/routes/index.tsx` — universal conversion workbench
+- `scripts/e2e-smoke.mjs` — real Chromium HEIC/data/media smoke coverage
 
 ## Commands
 
 ```bash
 pnpm install
-pnpm dev        # dev server on :3000
-pnpm test       # vitest
-pnpm check      # biome lint + format check
-pnpm typecheck  # TypeScript
-pnpm build      # production build
-pnpm start      # serve the built Nitro app
-pnpm verify     # all checks + production build
-```
-
-## Deploy
-
-Nitro builds a Node-compatible server:
-
-```bash
+pnpm dev
+pnpm check
+pnpm test
+pnpm typecheck
 pnpm build
-PORT=3000 HOST=127.0.0.1 pnpm start
+pnpm start
+pnpm verify
 ```
 
-The production server entry point is `.output/server/index.mjs`. It honors
-Nitro's standard `PORT` and `HOST` environment variables.
+The production build copies the single-thread FFmpeg core into
+`.output/public/ffmpeg/` and serves the Nitro app from
+`.output/server/index.mjs`.

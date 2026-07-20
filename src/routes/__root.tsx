@@ -2,9 +2,9 @@ import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 
-const title = "HEIC to JPEG — free, private, in your browser · lab86 convert";
+const title = "Convert any file — private, in your browser · lab86 convert";
 const description =
-	"Convert HEIC and HEIF photos to JPEG directly in your browser. Files never leave your device — no uploads, no server, no sign-up.";
+	"Convert images, audio, video, documents, text, and structured data directly in your browser. No uploads, no accounts, no files retained.";
 
 export const Route = createRootRoute({
 	head: () => ({
@@ -17,13 +17,13 @@ export const Route = createRootRoute({
 			{ property: "og:title", content: title },
 			{ property: "og:description", content: description },
 			{ property: "og:type", content: "website" },
-			{ property: "og:url", content: "https://heic.lab86.io/" },
+			{ property: "og:url", content: "https://convert.lab86.io/" },
 		],
 		links: [
 			{ rel: "stylesheet", href: appCss },
 			{ rel: "icon", href: "/icon.svg", type: "image/svg+xml" },
 			{ rel: "manifest", href: "/manifest.json" },
-			{ rel: "canonical", href: "https://heic.lab86.io/" },
+			{ rel: "canonical", href: "https://convert.lab86.io/" },
 		],
 	}),
 	shellComponent: RootDocument,

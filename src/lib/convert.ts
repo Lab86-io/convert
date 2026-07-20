@@ -1,28 +1,55 @@
-import type { Converter } from "./formats";
+import { convertData } from "./engines/data";
+import { convertDocument } from "./engines/document";
+import { convertImage } from "./engines/image";
+import { convertMedia } from "./engines/media";
+import { convertText } from "./engines/text";
+import type { ConversionPath, FormatDefinition } from "./formats";
 
-/**
- * Converts a source file to the converter's target format, entirely in the
- * browser. Codec code is imported dynamically so it never runs during SSR
- * and stays out of the initial bundle.
- */
+export interface ConvertOptions {
+	quality: number;
+	onProgress?: (progress: number) => void;
+}
+
 export async function convertFile(
-	file: Blob,
-	converter: Converter,
-	/** Quality from 1–100; only used for lossy targets. */
-	quality: number,
+	file: File,
+	source: FormatDefinition,
+	target: FormatDefinition,
+	path: ConversionPath,
+	options: ConvertOptions,
 ): Promise<Blob> {
-	switch (converter.id) {
-		case "heic-to-jpeg": {
-			const { heicTo } = await import("heic-to");
-			return heicTo({
-				blob: file,
-				type: "image/jpeg",
-				quality: clampQuality(quality) / 100,
-			});
-		}
+	options.onProgress?.(0.01);
+	let result: Blob;
+	switch (path.engine) {
+		case "image":
+			result = await convertImage(
+				file,
+				source,
+				target,
+				clampQuality(options.quality),
+			);
+			break;
+		case "media":
+			result = await convertMedia(
+				file,
+				target,
+				clampQuality(options.quality),
+				options.onProgress,
+			);
+			break;
+		case "data":
+			result = await convertData(file, source, target);
+			break;
+		case "text":
+			result = await convertText(file, source, target);
+			break;
+		case "document":
+			result = await convertDocument(file, source, target);
+			break;
 		default:
-			throw new Error(`Unknown converter: ${converter.id}`);
+			throw new Error(`Unknown conversion engine: ${String(path.engine)}`);
 	}
+	options.onProgress?.(1);
+	return result;
 }
 
 export function clampQuality(quality: number): number {
@@ -30,7 +57,6 @@ export function clampQuality(quality: number): number {
 	return Math.min(100, Math.max(1, Math.round(quality)));
 }
 
-/** Zips named blobs and returns the archive; used for "Download all". */
 export async function zipBlobs(
 	entries: ReadonlyArray<{ name: string; blob: Blob }>,
 ): Promise<Blob> {

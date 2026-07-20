@@ -1,5 +1,5 @@
 {
-  "name": "heic",
+  "name": "lab86-convert",
   "private": true,
   "type": "module",
   "imports": {
@@ -19,6 +19,8 @@
     "verify": "pnpm check && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
@@ -27,12 +29,20 @@
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.132.0",
     "client-zip": "^2.5.0",
+    "fast-xml-parser": "^5.10.1",
     "heic-to": "^1.5.2",
     "lucide-react": "^0.545.0",
+    "mammoth": "^1.12.0",
+    "marked": "^18.0.6",
     "nitro": "npm:nitro-nightly@latest",
+    "papaparse": "^5.5.4",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.1.200",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "turndown": "^7.2.4",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
@@ -42,12 +52,16 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^22.10.2",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^6.0.1",
     "jsdom": "^28.1.0",
+    "playwright-core": "^1.61.1",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
+    "vite-plugin-static-copy": "^4.1.1",
     "vitest": "^4.1.5"
   },
   "pnpm": {

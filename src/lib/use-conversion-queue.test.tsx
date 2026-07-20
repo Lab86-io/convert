@@ -1,12 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { heicToJpeg } from "./formats";
 import { useConversionQueue } from "./use-conversion-queue";
 
-const { convertFileMock } = vi.hoisted(() => ({
-	convertFileMock: vi.fn(),
-}));
-
+const { convertFileMock } = vi.hoisted(() => ({ convertFileMock: vi.fn() }));
 vi.mock("./convert", async () => {
 	const actual = await vi.importActual<typeof import("./convert")>("./convert");
 	return { ...actual, convertFile: convertFileMock };
@@ -33,31 +29,56 @@ beforeEach(() => {
 });
 
 describe("useConversionQueue", () => {
-	it("continues after the active item is removed while another is queued", async () => {
-		const firstConversion = deferred<Blob>();
+	it("detects mixed inputs and assigns per-file recommendations", () => {
+		const { result } = renderHook(() => useConversionQueue());
+		act(() =>
+			result.current.addFiles([
+				new File(["x"], "photo.heic", { type: "image/heic" }),
+				new File(["x"], "data.csv", { type: "text/csv" }),
+			]),
+		);
+		expect(
+			result.current.items.map((item) => [
+				item.source.id,
+				item.target.id,
+				item.status,
+			]),
+		).toEqual([
+			["heic", "jpeg", "ready"],
+			["csv", "json", "ready"],
+		]);
+	});
+
+	it("changes the output before conversion", () => {
+		const { result } = renderHook(() => useConversionQueue());
+		act(() =>
+			result.current.addFiles([
+				new File(["x"], "photo.png", { type: "image/png" }),
+			]),
+		);
+		act(() => result.current.changeTarget(result.current.items[0].id, "jpeg"));
+		expect(result.current.items[0].target.id).toBe("jpeg");
+		expect(result.current.items[0].outputName).toBe("photo.jpg");
+	});
+
+	it("continues after an active item is removed", async () => {
+		const first = deferred<Blob>();
 		convertFileMock
-			.mockImplementationOnce(() => firstConversion.promise)
-			.mockResolvedValueOnce(new Blob(["second"], { type: "image/jpeg" }));
-
-		const { result } = renderHook(() => useConversionQueue(heicToJpeg));
-
-		act(() => {
-			result.current.addFiles([new File(["one"], "one.heic")]);
-		});
-		await waitFor(() => {
-			expect(result.current.items[0]?.status).toBe("converting");
-		});
-
+			.mockImplementationOnce(() => first.promise)
+			.mockResolvedValueOnce(new Blob(["second"]));
+		const { result } = renderHook(() => useConversionQueue());
+		act(() => result.current.addFiles([new File(["one"], "one.heic")]));
+		act(() => result.current.startAll());
+		await waitFor(() =>
+			expect(result.current.items[0]?.status).toBe("converting"),
+		);
 		const activeId = result.current.items[0].id;
 		act(() => {
 			result.current.removeItem(activeId);
 			result.current.addFiles([new File(["two"], "two.heic")]);
 		});
-
-		act(() => {
-			firstConversion.resolve(new Blob(["first"], { type: "image/jpeg" }));
-		});
-
+		act(() => result.current.startAll());
+		act(() => first.resolve(new Blob(["first"])));
 		await waitFor(() => {
 			expect(convertFileMock).toHaveBeenCalledTimes(2);
 			expect(result.current.items[0]?.status).toBe("done");
