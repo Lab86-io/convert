@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+	/* lab86 convert — calm editorial workbench */
+	--color-paper: #faf6ef;
+	--color-paper-deep: #f2ecdf;
+	--color-ink: #201d19;
+	--color-ink-soft: #6f675b;
+	--color-ink-faint: #a49a8a;
+	--color-line: #e4dccb;
+	--color-accent: #d64513;
+	--color-accent-deep: #a83409;
+	--color-accent-wash: #fae8df;
+	--color-ok: #3d6b35;
+
+	--font-sans:
+		ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+		"Helvetica Neue", Arial, sans-serif;
+	--font-display: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+	--font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+		monospace;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+	min-height: 100%;
+}
+
+body {
+	margin: 0;
+	background-color: var(--color-paper);
+	color: var(--color-ink);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+::selection {
+	background-color: var(--color-accent);
+	color: #fff;
+}
+
+/* Native controls pick up the accent (range slider, checkboxes). */
+input[type="range"] {
+	accent-color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
