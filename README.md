@@ -59,3 +59,20 @@ pnpm verify
 The production build copies the single-thread FFmpeg core into
 `.output/public/ffmpeg/` and serves the Nitro app from
 `.output/server/index.mjs`.
+
+## Production
+
+`convert.lab86.io` runs on Railway using `railway.toml`:
+
+- Project: `lab86-convert`
+- Service: `web`
+- Environment: `production`
+- Health check: `/`
+
+Deploy the current directory with:
+
+```bash
+railway up --service web --environment production --detach -m "Describe release"
+```
+
+`heic.lab86.io` remains a lab86-hosted alias and fallback.
