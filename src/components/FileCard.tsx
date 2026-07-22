@@ -47,6 +47,48 @@ function CategoryIcon({ item }: { item: QueueItem }) {
 	}
 }
 
+function formatDuration(milliseconds: number): string {
+	const totalSeconds = Math.max(1, Math.round(milliseconds / 1_000));
+	const hours = Math.floor(totalSeconds / 3_600);
+	const minutes = Math.floor((totalSeconds % 3_600) / 60);
+	const seconds = totalSeconds % 60;
+	return hours > 0
+		? `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+		: `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function zoomDetails(item: QueueItem): string | null {
+	const summary = item.zoom?.summary;
+	if (!summary) return null;
+	const cameras = summary.videoTracks.filter(
+		(track) => track.kind === "camera",
+	).length;
+	const screens = summary.videoTracks.filter(
+		(track) => track.kind === "screen",
+	).length;
+	const tracks = [
+		cameras ? `${cameras} ${cameras === 1 ? "camera" : "cameras"}` : "",
+		screens ? `${screens} ${screens === 1 ? "screen" : "screens"}` : "",
+	]
+		.filter(Boolean)
+		.join(" + ");
+	const resolution = summary.videoTracks.find(
+		(track) => track.width > 0 && track.height > 0,
+	);
+	const details = [
+		tracks || "Audio only",
+		resolution ? `${resolution.width}×${resolution.height}` : "",
+		summary.audio
+			? summary.audio.encoding === "pcm-s16le"
+				? `${Math.round(summary.audio.sampleRate / 1_000)} kHz audio`
+				: "Audio detected"
+			: "",
+		summary.durationMs > 0 ? formatDuration(summary.durationMs) : "",
+		item.zoom?.companionName ? "control file paired" : "",
+	].filter(Boolean);
+	return details.join(" · ");
+}
+
 export function FileCard({
 	item,
 	onRemove,
@@ -55,11 +97,17 @@ export function FileCard({
 }: FileCardProps) {
 	const isDone = item.status === "done";
 	const isError = item.status === "error";
-	const locked = item.status === "queued" || item.status === "converting";
+	const isAnalyzing = item.status === "analyzing";
+	const locked =
+		isAnalyzing || item.status === "queued" || item.status === "converting";
 	const targets = getCompatibleTargets(item.source.id);
+	const recoveryDetails = zoomDetails(item);
 
 	return (
-		<li className="relative px-3 py-3.5 sm:px-4">
+		<li
+			className="relative px-3 py-3.5 sm:px-4"
+			role={isError ? "alert" : undefined}
+		>
 			{item.status === "converting" && (
 				<div
 					className="absolute inset-x-0 bottom-0 h-0.5 bg-paper-deep"
@@ -76,11 +124,8 @@ export function FileCard({
 					className={`flex size-8 shrink-0 items-center justify-center border ${isError ? "border-danger/30 bg-danger-wash" : "border-line bg-canvas"}`}
 				>
 					{isError ? (
-						<AlertCircle
-							className="size-5 text-accent-deep"
-							aria-hidden="true"
-						/>
-					) : item.status === "converting" ? (
+						<AlertCircle className="size-5 text-danger" aria-hidden="true" />
+					) : item.status === "converting" || isAnalyzing ? (
 						<Spinner className="size-5 text-accent" />
 					) : isDone ? (
 						<CheckCircle2 className="size-5 text-ok" aria-hidden="true" />
@@ -95,6 +140,14 @@ export function FileCard({
 					</p>
 					{isError ? (
 						<p className="mt-1 text-xs leading-4 text-danger">{item.error}</p>
+					) : isAnalyzing ? (
+						<p className="mt-1 text-xs leading-4 text-ink-soft">
+							Inspecting the recording packet map…
+						</p>
+					) : recoveryDetails ? (
+						<p className="mt-1 text-xs leading-4 text-ink-soft">
+							{recoveryDetails}
+						</p>
 					) : item.path.note ? (
 						<p
 							className="mt-1 text-xs leading-4 text-ink-soft"
@@ -134,11 +187,13 @@ export function FileCard({
 				>
 					{isError
 						? "Failed"
-						: isDone && item.blob
-							? `${formatBytes(item.blob.size)} output`
-							: item.status === "converting"
-								? `${Math.round(item.progress * 100)}% converting`
-								: `${formatBytes(item.file.size)} input`}
+						: isAnalyzing
+							? "Analyzing recording"
+							: isDone && item.blob
+								? `${formatBytes(item.blob.size)} output`
+								: item.status === "converting"
+									? `${Math.round(item.progress * 100)}% converting`
+									: `${formatBytes(item.file.size)} input`}
 				</p>
 
 				<div className="flex shrink-0 items-center gap-2 md:justify-end">
@@ -152,20 +207,22 @@ export function FileCard({
 							<span>Download</span>
 						</a>
 					)}
-					{isError && (
+					{isError && item.errorCode !== "CONTROL_FILE" && (
 						<button
 							type="button"
 							onClick={() => onRetry(item.id)}
-							className="inline-flex h-9 items-center gap-1.5 border border-line px-3 text-xs font-semibold hover:border-ink"
+							className="inline-flex h-9 items-center gap-1.5 border border-line px-3 text-xs font-semibold hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
 						>
 							<RotateCcw className="size-3.5" aria-hidden="true" />
-							<span>Retry</span>
+							<span>
+								{item.errorStage === "analysis" ? "Inspect again" : "Retry"}
+							</span>
 						</button>
 					)}
 					<button
 						type="button"
 						onClick={() => onRemove(item.id)}
-						className="p-2 text-ink-faint transition-colors hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+						className="inline-flex size-10 items-center justify-center text-ink-faint transition-colors hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
 					>
 						<X className="size-4" aria-hidden="true" />
 						<span className="sr-only">Remove {item.file.name}</span>

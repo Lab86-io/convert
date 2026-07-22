@@ -61,6 +61,21 @@ describe("useConversionQueue", () => {
 		expect(result.current.items[0].outputName).toBe("photo.jpg");
 	});
 
+	it("pairs Zoom control metadata with its media file", () => {
+		const { result } = renderHook(() => useConversionQueue());
+		act(() =>
+			result.current.addFiles([
+				new File(["media"], "double_click_to_convert_01.zoom"),
+				new File(["control"], "double_click_to_convert_02.zoom"),
+			]),
+		);
+		expect(result.current.items).toHaveLength(1);
+		expect(result.current.items[0].source.id).toBe("zoom");
+		expect(result.current.items[0].zoom?.companionName).toBe(
+			"double_click_to_convert_02.zoom",
+		);
+	});
+
 	it("continues after an active item is removed", async () => {
 		const first = deferred<Blob>();
 		convertFileMock

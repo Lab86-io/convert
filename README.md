@@ -13,6 +13,7 @@ or server-side file processing.
 - Images: HEIC/HEIF, JPEG, PNG, WebP, AVIF, GIF, BMP → JPEG, PNG, WebP, PDF
 - Audio: MP3, WAV, FLAC, AAC, M4A, OGG, Opus → MP3, WAV, FLAC, M4A, OGG, Opus
 - Video: MP4, MOV, WebM, MKV, AVI, MPEG → MP4, WebM, GIF, or extracted audio
+- Zoom recovery: unconverted `.zoom` media → gallery MP4, M4A, or WAV
 - Data: JSON, YAML, CSV, XML → JSON, YAML, CSV, XML
 - Text: TXT, Markdown, HTML → TXT, Markdown, HTML
 - Documents: DOCX → HTML, Markdown, TXT; PDF → TXT
@@ -20,6 +21,11 @@ or server-side file processing.
 Only valid edges are exposed in the UI. Animated image inputs use their first
 frame, scanned PDFs need OCR, and complex Word layout may be simplified. Media
 conversion is capped at 500 MB because it runs in browser memory.
+
+Zoom recovery recognizes the standard `_01.zoom` media and `_02.zoom` control
+pair, validates the proprietary packet container, and preserves independent
+camera/screen streams in a gallery MP4. See
+[the recovery notes](docs/zoom-recovery.md) for limitations and source research.
 
 ## Stack
 
@@ -36,6 +42,7 @@ conversion is capped at 500 MB because it runs in browser memory.
 
 - `src/lib/formats.ts` — typed format registry and explicit conversion graph
 - `src/lib/engines/` — lazy-loaded image, media, data, text, and document engines
+- `src/lib/engines/zoom.ts` — defensive Zoom packet inspection and local media recovery
 - `src/lib/convert.ts` — engine dispatcher and ZIP creation
 - `src/lib/use-conversion-queue.ts` — mixed queue, per-file targets, progress,
   retries, sequential processing, and object URL lifecycle

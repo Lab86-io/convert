@@ -6,7 +6,13 @@ export type FormatCategory =
 	| "text"
 	| "document";
 
-export type EngineId = "image" | "media" | "data" | "text" | "document";
+export type EngineId =
+	| "image"
+	| "media"
+	| "data"
+	| "text"
+	| "document"
+	| "zoom";
 
 export interface FormatDefinition {
 	id: string;
@@ -184,6 +190,14 @@ export const formats: readonly FormatDefinition[] = [
 		category: "video",
 		extensions: [".mpeg", ".mpg"],
 		mimeTypes: ["video/mpeg"],
+		canOutput: false,
+	}),
+	define({
+		id: "zoom",
+		label: "Unconverted Zoom recording",
+		category: "video",
+		extensions: [".zoom"],
+		mimeTypes: ["application/octet-stream"],
 		canOutput: false,
 	}),
 	define({
@@ -380,6 +394,27 @@ export const conversionPaths: readonly ConversionPath[] = [
 		"structural",
 		"Scanned PDFs need OCR and may not contain extractable text.",
 	),
+	path(
+		"zoom",
+		"mp4",
+		"zoom",
+		"lossy",
+		"Recovers camera and screen tracks into one gallery MP4 with the original audio.",
+	),
+	path(
+		"zoom",
+		"m4a",
+		"zoom",
+		"lossy",
+		"Recovers only the recording's audio track.",
+	),
+	path(
+		"zoom",
+		"wav",
+		"zoom",
+		"structural",
+		"Recovers the original 16-bit PCM audio into a standard WAV file.",
+	),
 ];
 
 const pathsBySource = new Map<string, ConversionPath[]>();
@@ -410,6 +445,7 @@ const recommendedTargets: Record<string, string> = {
 	mkv: "mp4",
 	avi: "mp4",
 	mpeg: "mp4",
+	zoom: "mp4",
 	json: "yaml",
 	yaml: "json",
 	csv: "json",
@@ -489,6 +525,11 @@ export function outputFileName(
 	source: FormatDefinition,
 	target: FormatDefinition,
 ): string {
+	if (
+		source.id === "zoom" &&
+		/^double_click_to_convert_0?1\.zoom$/i.test(inputName)
+	)
+		return `recovered-recording${target.extensions[0]}`;
 	const extension = extensionOf(inputName);
 	const base = source.extensions.includes(extension)
 		? inputName.slice(0, inputName.length - extension.length)

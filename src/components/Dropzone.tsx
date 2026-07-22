@@ -75,8 +75,8 @@ export function Dropzone({ onFiles, variant }: DropzoneProps) {
 								: "Drop files into this batch"}
 						</span>
 						<span className="mt-2 block text-sm leading-5 text-ink-soft">
-							Images, audio, video, documents, text, or structured data. Files
-							never leave this browser.
+							Images, audio, video, Zoom recordings, documents, text, or data.
+							Files never leave this browser.
 						</span>
 						<span id={`${inputId}-hint`} className="sr-only">
 							Select multiple files at once

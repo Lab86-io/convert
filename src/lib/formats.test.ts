@@ -63,6 +63,18 @@ describe("conversion graph", () => {
 		]);
 	});
 
+	it("treats unconverted Zoom files as a recovery input", () => {
+		expect(
+			detectFormat({ name: "double_click_to_convert_01.zoom", type: "" })?.id,
+		).toBe("zoom");
+		expect(getCompatibleTargets("zoom").map((format) => format.id)).toEqual([
+			"mp4",
+			"m4a",
+			"wav",
+		]);
+		expect(getConversionPath("zoom", "mp4")?.engine).toBe("zoom");
+	});
+
 	it("keeps unsupported graph edges closed", () => {
 		expect(getConversionPath("pdf", "docx")).toBeNull();
 		expect(getConversionPath("json", "mp4")).toBeNull();
@@ -105,5 +117,6 @@ describe("display helpers", () => {
 		expect(accept).toContain(".heic");
 		expect(accept).toContain("video/mp4");
 		expect(accept).toContain(".docx");
+		expect(accept).toContain(".zoom");
 	});
 });

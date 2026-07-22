@@ -1,24 +1,9 @@
 import type { FormatDefinition } from "../formats";
-
-type ProgressCallback = (progress: number) => void;
-
-let ffmpegPromise: Promise<import("@ffmpeg/ffmpeg").FFmpeg> | null = null;
-
-async function getFfmpeg(onProgress?: ProgressCallback) {
-	if (!ffmpegPromise) {
-		ffmpegPromise = (async () => {
-			onProgress?.(0.02);
-			const { FFmpeg } = await import("@ffmpeg/ffmpeg");
-			const ffmpeg = new FFmpeg();
-			await ffmpeg.load({
-				coreURL: "/ffmpeg/ffmpeg-core.js",
-				wasmURL: "/ffmpeg/ffmpeg-core.wasm",
-			});
-			return ffmpeg;
-		})();
-	}
-	return ffmpegPromise;
-}
+import {
+	getFfmpeg,
+	MAX_BROWSER_MEDIA_BYTES,
+	type ProgressCallback,
+} from "./ffmpeg";
 
 function mediaArgs(target: FormatDefinition, quality: number): string[] {
 	const normalized = Math.min(100, Math.max(1, quality));
@@ -86,7 +71,7 @@ export async function convertMedia(
 	quality: number,
 	onProgress?: ProgressCallback,
 ): Promise<Blob> {
-	if (file.size > 500 * 1024 * 1024)
+	if (file.size > MAX_BROWSER_MEDIA_BYTES)
 		throw new Error("Browser media conversion is limited to 500 MB per file.");
 	const ffmpeg = await getFfmpeg(onProgress);
 	const token = crypto.randomUUID().replaceAll("-", "");

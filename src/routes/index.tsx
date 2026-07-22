@@ -1,5 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Archive, ArrowRight, Check, LockKeyhole, X } from "lucide-react";
+import {
+	Archive,
+	ArrowRight,
+	Check,
+	LockKeyhole,
+	Video,
+	X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Dropzone } from "../components/Dropzone";
 import { FileCard } from "../components/FileCard";
@@ -42,16 +49,31 @@ function Home() {
 		[items],
 	);
 	const actionableCount = items.filter(
-		(item) => item.status === "ready" || item.status === "error",
+		(item) =>
+			item.status === "ready" ||
+			(item.status === "error" && item.errorCode !== "CONTROL_FILE"),
 	).length;
 	const working = items.some(
-		(item) => item.status === "queued" || item.status === "converting",
+		(item) =>
+			item.status === "analyzing" ||
+			item.status === "queued" ||
+			item.status === "converting",
 	);
+	const analyzingZoom = items.some((item) => item.status === "analyzing");
 	const errorCount = items.filter((item) => item.status === "error").length;
 	const staleCount = doneItems.filter(
 		(item) => item.path.fidelity === "lossy" && item.quality !== quality,
 	).length;
 	const showQuality = items.some((item) => item.path.fidelity === "lossy");
+	const recoveringOnly =
+		actionableCount > 0 &&
+		items
+			.filter(
+				(item) =>
+					item.status === "ready" ||
+					(item.status === "error" && item.errorCode !== "CONTROL_FILE"),
+			)
+			.every((item) => item.source.id === "zoom");
 	const savings = useMemo(() => {
 		const input = doneItems.reduce((sum, item) => sum + item.file.size, 0);
 		const output = doneItems.reduce(
@@ -62,7 +84,6 @@ function Home() {
 	}, [doneItems]);
 
 	useEffect(() => {
-		if (!hasItems) return;
 		function keepFileDropInApp(event: DragEvent) {
 			if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
 		}
@@ -77,7 +98,7 @@ function Home() {
 			document.removeEventListener("dragover", keepFileDropInApp);
 			document.removeEventListener("drop", addDroppedFiles);
 		};
-	}, [addFiles, hasItems]);
+	}, [addFiles]);
 
 	function handleClear() {
 		if (
@@ -129,7 +150,8 @@ function Home() {
 								Convert files
 							</h1>
 							<p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
-								Images, audio, video, documents, text, and data in one batch.
+								Convert everyday files and recover unconverted Zoom recordings
+								in one batch.
 							</p>
 						</div>
 						<div className="text-xs text-ink-soft">
@@ -153,7 +175,7 @@ function Home() {
 						<button
 							type="button"
 							onClick={dismissRejected}
-							className="p-1 text-ink-soft hover:text-ink"
+							className="p-1 text-ink-soft hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
 						>
 							<X className="size-4" />
 							<span className="sr-only">Dismiss</span>
@@ -174,6 +196,19 @@ function Home() {
 						</div>
 						<div className="p-3 sm:p-5">
 							<Dropzone onFiles={addFiles} variant="hero" />
+						</div>
+						<div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-accent-wash px-4 py-3 text-xs sm:px-5">
+							<p className="flex items-center gap-2 font-medium text-ink">
+								<Video className="size-3.5 text-accent" aria-hidden="true" />
+								<span>
+									Zoom recovery: add the larger{" "}
+									<span className="font-mono">_01.zoom</span> file.
+								</span>
+							</p>
+							<p className="text-ink-soft">
+								If you also select <span className="font-mono">_02.zoom</span>,
+								it is paired automatically.
+							</p>
 						</div>
 						<div className="grid grid-cols-2 border-t border-line sm:grid-cols-3 lg:grid-cols-6">
 							{Object.entries(categoryLabels).map(
@@ -221,7 +256,7 @@ function Home() {
 							<button
 								type="button"
 								onClick={handleClear}
-								className="text-xs text-ink-soft hover:text-ink"
+								className="text-xs text-ink-soft hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
 							>
 								Clear batch
 							</button>
@@ -241,7 +276,7 @@ function Home() {
 											onChange={(event) =>
 												setQuality(Number(event.target.value))
 											}
-											className="w-20 sm:w-28"
+											className="w-28"
 										/>
 										<output className="w-7 text-right tabular-nums text-ink">
 											{quality}
@@ -256,7 +291,7 @@ function Home() {
 									<button
 										type="button"
 										onClick={reconvertAll}
-										className="text-xs font-medium text-accent underline underline-offset-4"
+										className="text-xs font-medium text-accent underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
 									>
 										Re-convert finished
 									</button>
@@ -264,10 +299,15 @@ function Home() {
 							</div>
 							<div className="flex items-center gap-2">
 								{working && (
-									<p className="flex items-center gap-2 font-mono text-[10px] uppercase text-ink-soft">
-										<Spinner className="size-3.5" /> {doneItems.length}/
-										{items.length} complete
-									</p>
+									<output
+										className="flex items-center gap-2 font-mono text-[10px] uppercase text-ink-soft"
+										aria-live="polite"
+									>
+										<Spinner className="size-3.5" />{" "}
+										{analyzingZoom
+											? "Inspecting Zoom recording"
+											: `${doneItems.length}/${items.length} complete`}
+									</output>
 								)}
 								{doneItems.length > 1 && !working && (
 									<button
@@ -290,8 +330,11 @@ function Home() {
 										onClick={startAll}
 										className="inline-flex h-9 items-center gap-2 bg-accent px-4 text-xs font-semibold text-white hover:bg-accent-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
 									>
-										Convert{" "}
-										{actionableCount === items.length ? "all" : actionableCount}
+										{recoveringOnly
+											? actionableCount === 1
+												? "Recover recording"
+												: `Recover ${actionableCount} recordings`
+											: `Convert ${actionableCount === items.length ? "all" : actionableCount}`}
 										<ArrowRight className="size-3.5" aria-hidden="true" />
 									</button>
 								)}
@@ -318,7 +361,11 @@ function Home() {
 							))}
 						</ul>
 
-						<div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-t border-line bg-canvas px-3 py-2 font-mono text-[11px] text-ink-soft sm:px-4">
+						<output
+							className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-t border-line bg-canvas px-3 py-2 font-mono text-[11px] text-ink-soft sm:px-4"
+							aria-live="polite"
+							aria-atomic="true"
+						>
 							{doneItems.length > 0 && !working ? (
 								<p className="flex items-center gap-2">
 									<Check className="size-3.5 text-ok" aria-hidden="true" />
@@ -332,12 +379,14 @@ function Home() {
 							) : (
 								<p>
 									{working
-										? "Conversion running locally"
+										? analyzingZoom
+											? "Inspecting recording locally"
+											: "Conversion running locally"
 										: "Review outputs, then convert"}
 								</p>
 							)}
 							<p className="text-ink-faint">Processed in this browser</p>
-						</div>
+						</output>
 					</section>
 				)}
 			</main>
@@ -345,7 +394,7 @@ function Home() {
 			<footer className="border-t border-line bg-panel">
 				<div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-ink-faint sm:px-6">
 					<p>Local processing. No file uploads.</p>
-					<p className="font-mono">lab86 convert v1</p>
+					<p className="font-mono">lab86 convert v2</p>
 				</div>
 			</footer>
 		</div>

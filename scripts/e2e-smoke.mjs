@@ -6,6 +6,7 @@ const url = process.env.TEST_URL ?? "http://127.0.0.1:8894";
 const executablePath = process.env.CHROMIUM_PATH;
 const heicPath = process.env.HEIC_FIXTURE;
 const mediaPath = process.env.MEDIA_FIXTURE;
+const zoomPath = process.env.ZOOM_FIXTURE;
 assert(executablePath, "CHROMIUM_PATH is required");
 assert(heicPath, "HEIC_FIXTURE is required");
 assert(mediaPath, "MEDIA_FIXTURE is required");
@@ -26,6 +27,15 @@ const fixtures = {
 		mimeType: "text/csv",
 		buffer: Buffer.from("name,count\npears,3\napples,5\n"),
 	},
+	...(zoomPath
+		? {
+				zoom: {
+					name: "double_click_to_convert_01.zoom",
+					mimeType: "application/octet-stream",
+					buffer: await readFile(zoomPath),
+				},
+			}
+		: {}),
 };
 
 const browser = await chromium.launch({ executablePath, headless: true });
@@ -46,7 +56,9 @@ async function convertOne(file, target) {
 	await reset();
 	await page.locator('input[type="file"]').setInputFiles(file);
 	if (target) await page.getByLabel(new RegExp(`output format for ${file.name}`, "i")).selectOption(target);
-	await page.getByRole("button", { name: /convert all/i }).click();
+	await page
+		.getByRole("button", { name: /convert all|recover recording/i })
+		.click({ timeout: 30_000 });
 	const download = page.getByRole("link", { name: /download/i });
 	const retry = page.getByRole("button", { name: /retry/i });
 	const outcome = await Promise.race([
@@ -86,13 +98,26 @@ try {
 	assert(media.name.endsWith(".mp3") && media.size > 1_000);
 	console.log(`Media smoke passed: ${media.size} bytes`);
 
+	let zoom = null;
+	if (fixtures.zoom) {
+		zoom = await convertOne(fixtures.zoom);
+		assert(zoom.name.endsWith(".mp4") && zoom.size > 10_000);
+		console.log(`Zoom recovery smoke passed: ${zoom.size} bytes`);
+	}
+
 	await page.screenshot({ path: "/tmp/lab86-convert-results.png", fullPage: true });
 	await page.setViewportSize({ width: 390, height: 844 });
 	await page.screenshot({ path: "/tmp/lab86-convert-mobile.png", fullPage: true });
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 	assert(overflow <= 1, `Mobile layout overflows by ${overflow}px`);
 	assert.deepEqual(runtimeErrors, []);
-	console.log(JSON.stringify({ outputs: [csv, heic, media], overflow }, null, 2));
+	console.log(
+		JSON.stringify(
+			{ outputs: [csv, heic, media, ...(zoom ? [zoom] : [])], overflow },
+			null,
+			2,
+		),
+	);
 } finally {
 	await browser.close();
 }

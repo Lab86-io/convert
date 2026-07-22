@@ -3,6 +3,7 @@ import { convertDocument } from "./engines/document";
 import { convertImage } from "./engines/image";
 import { convertMedia } from "./engines/media";
 import { convertText } from "./engines/text";
+import { convertZoomRecording } from "./engines/zoom";
 import type { ConversionPath, FormatDefinition } from "./formats";
 
 export interface ConvertOptions {
@@ -44,6 +45,14 @@ export async function convertFile(
 			break;
 		case "document":
 			result = await convertDocument(file, source, target);
+			break;
+		case "zoom":
+			result = await convertZoomRecording(
+				file,
+				target,
+				clampQuality(options.quality),
+				options.onProgress,
+			);
 			break;
 		default:
 			throw new Error(`Unknown conversion engine: ${String(path.engine)}`);
