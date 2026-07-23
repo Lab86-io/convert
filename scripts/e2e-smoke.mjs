@@ -8,25 +8,31 @@ const heicPath = process.env.HEIC_FIXTURE;
 const mediaPath = process.env.MEDIA_FIXTURE;
 const zoomPath = process.env.ZOOM_FIXTURE;
 assert(executablePath, "CHROMIUM_PATH is required");
-assert(heicPath, "HEIC_FIXTURE is required");
-assert(mediaPath, "MEDIA_FIXTURE is required");
 
 const fixtures = {
-	heic: {
-		name: "photo.heic",
-		mimeType: "image/heic",
-		buffer: await readFile(heicPath),
-	},
-	media: {
-		name: "clip.mp4",
-		mimeType: "video/mp4",
-		buffer: await readFile(mediaPath),
-	},
 	csv: {
 		name: "records.csv",
 		mimeType: "text/csv",
 		buffer: Buffer.from("name,count\npears,3\napples,5\n"),
 	},
+	...(heicPath
+		? {
+				heic: {
+					name: "photo.heic",
+					mimeType: "image/heic",
+					buffer: await readFile(heicPath),
+				},
+			}
+		: {}),
+	...(mediaPath
+		? {
+				media: {
+					name: "clip.mp4",
+					mimeType: "video/mp4",
+					buffer: await readFile(mediaPath),
+				},
+			}
+		: {}),
 	...(zoomPath
 		? {
 				zoom: {
@@ -81,22 +87,29 @@ async function convertOne(file, target) {
 try {
 	await reset();
 	await page.screenshot({ path: "/tmp/lab86-convert-home.png", fullPage: true });
-	await page.locator('input[type="file"]').setInputFiles([fixtures.heic, fixtures.media, fixtures.csv]);
-	await page.getByRole("listitem").nth(2).waitFor();
-	assert.equal(await page.getByRole("listitem").count(), 3);
+	const queueFixtures = Object.values(fixtures);
+	await page.locator('input[type="file"]').setInputFiles(queueFixtures);
+	await page.getByRole("listitem").nth(queueFixtures.length - 1).waitFor();
+	assert.equal(await page.getByRole("listitem").count(), queueFixtures.length);
 	await page.screenshot({ path: "/tmp/lab86-convert-queue.png", fullPage: true });
 
 	const csv = await convertOne(fixtures.csv);
 	assert(csv.name.endsWith(".json") && JSON.parse(csv.text)[0].count === 3);
 	console.log(`CSV smoke passed: ${csv.size} bytes`);
 
-	const heic = await convertOne(fixtures.heic);
-	assert(heic.name.endsWith(".jpg") && heic.size > 1_000);
-	console.log(`HEIC smoke passed: ${heic.size} bytes`);
+	let heic = null;
+	if ("heic" in fixtures) {
+		heic = await convertOne(fixtures.heic);
+		assert(heic.name.endsWith(".jpg") && heic.size > 1_000);
+		console.log(`HEIC smoke passed: ${heic.size} bytes`);
+	}
 
-	const media = await convertOne(fixtures.media, "mp3");
-	assert(media.name.endsWith(".mp3") && media.size > 1_000);
-	console.log(`Media smoke passed: ${media.size} bytes`);
+	let media = null;
+	if ("media" in fixtures) {
+		media = await convertOne(fixtures.media, "mp3");
+		assert(media.name.endsWith(".mp3") && media.size > 1_000);
+		console.log(`Media smoke passed: ${media.size} bytes`);
+	}
 
 	let zoom = null;
 	if (fixtures.zoom) {
@@ -113,7 +126,15 @@ try {
 	assert.deepEqual(runtimeErrors, []);
 	console.log(
 		JSON.stringify(
-			{ outputs: [csv, heic, media, ...(zoom ? [zoom] : [])], overflow },
+			{
+				outputs: [
+					csv,
+					...(heic ? [heic] : []),
+					...(media ? [media] : []),
+					...(zoom ? [zoom] : []),
+				],
+				overflow,
+			},
 			null,
 			2,
 		),

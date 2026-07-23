@@ -2,6 +2,7 @@
   "name": "lab86-convert",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "imports": {
     "#/*": "./src/*"
   },
@@ -12,6 +13,7 @@
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e": "node scripts/e2e-smoke.mjs",
     "typecheck": "tsc --noEmit",
     "format": "biome format",
     "lint": "biome lint",
